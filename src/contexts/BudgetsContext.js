@@ -1,8 +1,11 @@
 import React, { useContext, useState } from 'react'
 import { v4 as uuidV4 } from 'uuid'
+import useLocalStorage from "../hooks/useLocalStorage"
 
 // Context lets the parent component make some information available to any component in the tree below it—no matter how deep—without passing it explicitly through props.
 const BudgetsContext = React.createContext()
+
+export const UNCATEGORIZED_BUDGET_ID = "Uncategorized"
 
 export function useBudgets() {
     return useContext(BudgetsContext)
@@ -12,8 +15,8 @@ export function useBudgets() {
 export const BudgetsProvider = ({ children }) => {
 
     //Budgets and expenses are contained in arrays, since we'll be adding them on our budget cards.
-    const [budgets, setBudgets] = useState([])
-    const [expenses, setExpenses] = useState([])
+    const [budgets, setBudgets] = useLocalStorage("budgets", [])
+    const [expenses, setExpenses] = useLocalStorage("expenses", [])
 
     function getBudgetExpenses(budgetId) {
         return expenses.filter(expense => expense.budgetId === budgetId )
@@ -36,7 +39,13 @@ export const BudgetsProvider = ({ children }) => {
     }
 
     function deleteBudget({ id }) {
-        //TODO: Deal with uncategorized expenses on deletion
+        setExpenses(prevExpenses => {
+            return prevExpenses.map(expense => {
+                if (expense.budgetId !== id) return expense
+                return { ...expense, budgetId: UNCATEGORIZED_BUDGET_ID }
+            })
+        })
+
         setBudgets(prevBudgets => {
             return prevBudgets.filter(budget => budget.id !== id)
         })
@@ -48,7 +57,7 @@ export const BudgetsProvider = ({ children }) => {
         })
     }
 
-    return <BudgetsContext.Provider value={{
+    return (<BudgetsContext.Provider value={{
         budgets,
         expenses,
         getBudgetExpenses,
@@ -57,4 +66,5 @@ export const BudgetsProvider = ({ children }) => {
         deleteBudget,
         deleteExpense
     }}>{children}</BudgetsContext.Provider>
+    )
 }
